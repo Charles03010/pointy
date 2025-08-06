@@ -7,10 +7,10 @@ export default function Home() {
       <div className="flex flex-col h-full justify-between">
         <div className="text-center w-80 mx-auto space-y-2 mt-16">
           <h1 className="font-semibold text-2xl">Web Pointer</h1>
-          <p className="font-light">
-            Let's simplify the use of pointers. From now on, you can start using
-            your smartphone. Let's try it!
-          </p>
+            <p className="font-light">
+            Let&apos;s simplify the use of pointers. From now on, you can start using
+            your smartphone. Let&apos;s try it!
+            </p>
         </div>
         <div className="">
           <Image src="/assets/home-ilust.png" className="mx-auto" alt="" width={500} height={500} />

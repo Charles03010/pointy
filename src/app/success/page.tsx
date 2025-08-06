@@ -17,7 +17,7 @@ export default function Success() {
             height={500}
           />
           <p className="font-light">
-            Yeahh Succes to pairing! let's start setting up courses using this
+            Yeahh Succes to pairing! let&apos;s start setting up courses using this
             smartphone.
           </p>
         </div>
@@ -26,7 +26,7 @@ export default function Success() {
             href="/connected"
             className="text-gray-500 font-light text-center py-4 underline rounded-lg "
           >
-            Let's Get Started
+            Let&apos;s Get Started
           </Link>
         </div>
       </div>
