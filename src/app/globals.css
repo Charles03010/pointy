@@ -131,3 +131,16 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+svg circle#c2 {
+  animation: dash2 0.5s linear infinite;
+}
+
+@keyframes dash2 {
+  from {
+    stroke-dasharray: 0 300;
+  }
+  to {
+    stroke-dasharray: 300 300;
+  }
+}
