@@ -5,6 +5,11 @@
 
 :root {
   --btn-blue-primary: #00427B;
+  --btn-blue-mouse: #0758A2;
+  --btn-blue-keyboard: #5E809F;
+  --btn-blue-gyro: #447AAB;
+  --btn-blue-track: #204C73;
+
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);

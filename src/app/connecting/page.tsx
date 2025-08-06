@@ -1,4 +1,16 @@
+'use client';
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+
 export default function Connecting() {
+  const router = useRouter();
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      router.push("/success");
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [router]);
   return (
     <>
       <div className="flex flex-col h-full space-y-8 items-center">
