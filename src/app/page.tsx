@@ -24,7 +24,7 @@ export default function Home() {
           </Link>
           <Link
             href="/skip"
-            className="text-gray-500 w-[90%] font-light text-center py-4 rounded-lg"
+            className="text-gray-500 font-light text-center py-4 rounded-lg"
           >
             Skip for now
           </Link>
