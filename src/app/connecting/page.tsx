@@ -1,16 +1,31 @@
 'use client';
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSocket } from "../socket";
 
 export default function Connecting() {
+  const socket = useSocket();
   const router = useRouter();
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      router.push("/success");
-    }, 5000);
-    return () => clearTimeout(timer);
-  }, [router]);
+    if (sessionStorage.getItem("room") && socket) {
+      socket.emit("join", { room: sessionStorage.getItem("room") });
+
+      socket.on("join_status", (response) => {
+        if (response.status === "success") {
+          router.push("/success");
+        } else {
+          router.push("/pairing");
+        }
+      });
+      return () => {
+        socket.off("join_status");
+      };
+    }
+    else{
+      router.push("/pairing");
+    }
+  }, [socket, router]);
   return (
     <>
       <div className="flex flex-col h-full space-y-8 items-center">
