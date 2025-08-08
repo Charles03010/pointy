@@ -1,6 +1,6 @@
 "use client";
 import { ChevronLeft, ChevronRight, Mouse, Orbit } from "lucide-react";
-import { useEffect, useState, useRef } from "react"; // Import useRef
+import { useEffect, useState, useRef } from "react";
 import { useSocket } from "../socket";
 import { useRouter } from "next/navigation";
 
@@ -8,14 +8,13 @@ export default function Connected() {
   const socket = useSocket();
   const router = useRouter();
 
-  // --- State and Refs ---
   const [gyroEnabled, setGyroEnabled] = useState(false);
 
-  // Use useRef to store values that persist across renders without causing re-renders
   const lastTouch = useRef<{ x: number; y: number } | null>(null);
-  const lastSentTime = useRef(Date.now()); // Fixed gyro throttling
+  const lastSentTime = useRef(Date.now());
 
-  // --- Interfaces ---
+  const THROTTLE_DELAY = 1000 / 8;
+
   interface GyroData {
     alpha: number;
     beta: number;
@@ -28,7 +27,6 @@ export default function Connected() {
     gamma: number | null;
   }
 
-  // --- Effects for Socket and Gyro ---
   useEffect(() => {
     if (sessionStorage.getItem("room") && socket) {
       socket.emit("join", { room: sessionStorage.getItem("room") });
@@ -48,11 +46,12 @@ export default function Connected() {
   }, [socket, router]);
 
   useEffect(() => {
-    const handleDeviceOrientation = (event: DeviceOrientationEventWithAngles) => {
+    const handleDeviceOrientation = (
+      event: DeviceOrientationEventWithAngles
+    ) => {
       const currentTime = Date.now();
 
-      // Correctly throttle gyro data using the ref's value
-      if (gyroEnabled && currentTime - lastSentTime.current >= 50) {
+      if (gyroEnabled && currentTime - lastSentTime.current >= THROTTLE_DELAY) {
         const { alpha, beta, gamma } = event;
         const gyro: GyroData = {
           alpha: alpha ?? 0,
@@ -64,7 +63,7 @@ export default function Connected() {
           socket.emit("gyro_data", gyro);
         }
 
-        lastSentTime.current = currentTime; // Update the ref's value
+        lastSentTime.current = currentTime;
       }
     };
 
@@ -72,45 +71,46 @@ export default function Connected() {
     return () => {
       window.removeEventListener("deviceorientation", handleDeviceOrientation);
     };
-  }, [gyroEnabled, socket]); // Added socket to dependency array
+  }, [gyroEnabled, socket]);
 
-  // --- Click and Keyboard Handlers ---
   const sendMouseLeft = () => socket?.emit("mouse_left");
   const sendMouseRight = () => socket?.emit("mouse_right");
   const sendKeyboardLeft = () => socket?.emit("keyboard_left");
   const sendKeyboardRight = () => socket?.emit("keyboard_right");
   const toggleGyroControl = () => setGyroEnabled((prev) => !prev);
 
-  // --- CORRECTED TRACKPAD LOGIC ---
-
-  // 1. When the touch starts, record the initial position.
   const handleTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
     const touch = event.touches[0];
     console.log("Touch started:", touch.clientX, touch.clientY);
     lastTouch.current = { x: touch.clientX, y: touch.clientY };
   };
 
-  // 2. As the touch moves, calculate the difference (delta) and send it.
   const handleTouchMove = (event: React.TouchEvent<HTMLDivElement>) => {
-    // event.preventDefault(); // Prevent scrolling while dragging on the trackpad
-    if (!lastTouch.current) return; // Exit if touch hasn't started
+    if (!lastTouch.current) return;
 
     const touch = event.touches[0];
-    const deltaX = touch.clientX - lastTouch.current.x;
-    const deltaY = touch.clientY - lastTouch.current.y;
+    const trackpad = event.currentTarget;
+    const trackpadRect = trackpad.getBoundingClientRect();
 
-    // Send the relative movement, not the absolute position
-    socket?.emit("trackpad_touch", { "x": deltaX, "y": deltaY });
+    const centerX = trackpadRect.left + trackpadRect.width / 2;
+    const centerY = trackpadRect.top + trackpadRect.height / 2;
 
-    // Update the last touch position for the next move event
+    const deltaX = touch.clientX - centerX;
+    const deltaY = touch.clientY - centerY;
+
+    const currentTime = Date.now();
+    if (currentTime - lastSentTime.current >= THROTTLE_DELAY) {
+      socket?.emit("trackpad_touch", { x: deltaX, y: deltaY });
+      lastSentTime.current = currentTime;
+    }
+
     lastTouch.current = { x: touch.clientX, y: touch.clientY };
     console.log("Touch moved:", touch.clientX, touch.clientY);
   };
 
-  // 3. When the touch ends, clear the last position.
   const handleTouchEnd = () => {
-    lastTouch.current = null; // Reset for the next touch gesture
-    socket?.emit("trackpad_touch_end"); // Optional: notify server the gesture ended
+    lastTouch.current = null;
+    socket?.emit("trackpad_touch_end");
     console.log("Touch ended");
   };
 

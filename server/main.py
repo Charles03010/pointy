@@ -61,22 +61,18 @@ async def gyro_data(sid, data):
     'alpha', 'beta', and 'gamma' values. These will be used to move the mouse.
     """
     if room_id in sio.rooms(sid):
-        alpha = data.get('alpha', 0)
-        beta = data.get('beta', 0)
-        gamma = data.get('gamma', 0)
+        alpha = data.get("alpha", 0)
+        beta = data.get("beta", 0)
+        gamma = data.get("gamma", 0)
 
-        # Get the screen dimensions
         screen_width, screen_height = pyautogui.size()
 
-        # Map the gyroscope values to screen coordinates
         move_x = (gamma / 90) * screen_width
         move_y = (beta / 180) * screen_height
 
-        # Move the mouse to the new position
         print(f"Moving mouse to: {move_x}, {move_y}")
-        pyautogui.moveTo(move_x, move_y, duration=0)
+        pyautogui.moveRel(move_x, move_y, duration=0, tween=pyautogui.linear)
 
-        # Broadcast the received gyroscope data to all clients in the room
         await sio.emit("gyro_data", data, room=room_id, skip_sid=sid)
     else:
         print(f"⚠️ {sid} tried to send gyroscope data without being in the room.")
@@ -85,7 +81,7 @@ async def gyro_data(sid, data):
 async def mouse_left(sid):
     """Simulate a left mouse click."""
     if room_id in sio.rooms(sid):
-        pyautogui.click(button='left')
+        pyautogui.click(button="left")
         print(f"🔲 {sid} simulated a left mouse click.")
     else:
         print(f"⚠️ {sid} tried to send a mouse click without being in the room.")
@@ -94,7 +90,7 @@ async def mouse_left(sid):
 async def mouse_right(sid):
     """Simulate a right mouse click."""
     if room_id in sio.rooms(sid):
-        pyautogui.click(button='right')
+        pyautogui.click(button="right")
         print(f"🔲 {sid} simulated a right mouse click.")
     else:
         print(f"⚠️ {sid} tried to send a mouse click without being in the room.")
@@ -103,7 +99,7 @@ async def mouse_right(sid):
 async def keyboard_left(sid):
     """Simulate a left arrow key press."""
     if room_id in sio.rooms(sid):
-        keyboard.press_and_release('left')
+        keyboard.press_and_release("left")
         print(f"⏪ {sid} simulated a left arrow key press.")
     else:
         print(f"⚠️ {sid} tried to send a keyboard action without being in the room.")
@@ -112,7 +108,7 @@ async def keyboard_left(sid):
 async def keyboard_right(sid):
     """Simulate a right arrow key press."""
     if room_id in sio.rooms(sid):
-        keyboard.press_and_release('right')
+        keyboard.press_and_release("right")
         print(f"⏩ {sid} simulated a right arrow key press.")
     else:
         print(f"⚠️ {sid} tried to send a keyboard action without being in the room.")
@@ -130,16 +126,11 @@ async def trackpad_action(sid):
 async def trackpad_touch(sid, data):
     """Handle trackpad touch events sent from clients."""
     if room_id in sio.rooms(sid):
-        touch_x = data.get('x', 0)
-        touch_y = data.get('y', 0)
+        touch_x = data.get("x", 0)
+        touch_y = data.get("y", 0)
 
-        # Map the touch data to screen coordinates (if needed)
-        screen_width, screen_height = pyautogui.size()
+        pyautogui.moveRel(touch_x, touch_y, duration=0, tween=pyautogui.linear)
 
-        # Simulate mouse movement based on touch coordinates
-        pyautogui.moveTo(touch_x, touch_y, duration=0)
-
-        # Log the touch coordinates
         print(f"Trackpad touch detected: X: {touch_x}, Y: {touch_y}")
     else:
         print(f"⚠️ {sid} tried to send trackpad touch data without being in the room.")
@@ -148,8 +139,7 @@ async def trackpad_touch(sid, data):
 async def trackpad_touch_end(sid):
     """Handle trackpad touch end event."""
     if room_id in sio.rooms(sid):
-        # Simulate a mouse click or another action when touch ends
-        # pyautogui.click()
+
         print(f"🖱️ {sid} simulated a trackpad click at the end of touch.")
     else:
         print(f"⚠️ {sid} tried to send a trackpad touch end without being in the room.")
