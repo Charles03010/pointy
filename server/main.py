@@ -4,13 +4,13 @@ import random
 import pyautogui
 import keyboard
 
-# Flask setup
+
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# Room and clients setup
+
 room_id = str(random.randint(1000, 9999))
-connected_clients = set()  # Track connected clients in the room
+connected_clients = set()  
 print(f"✅ Server is ready. The secret room ID is: {room_id}")
 
 def is_member_of_room(sid):
@@ -50,8 +50,8 @@ def handle_gyro_data(sid, data):
         alpha, beta, gamma = data.get("alpha", 0), data.get("beta", 0), data.get("gamma", 0)
         screen_width, screen_height = pyautogui.size()
 
-        move_x = (gamma / 90) * screen_width
-        move_y = (beta / 180) * screen_height
+        move_x = gamma
+        move_y = -beta
 
         print(f"Moving mouse to: {move_x}, {move_y}")
         pyautogui.moveRel(move_x, move_y, duration=0, tween=pyautogui.linear)
@@ -82,7 +82,7 @@ def on_connect():
 @socketio.on('disconnect')
 def on_disconnect():
     sid = request.sid
-    connected_clients.discard(sid)  # Remove the client from the connected clients set
+    connected_clients.discard(sid)  
     print(f"🔌 Client disconnected: {sid}")
 
 @socketio.on('join')
@@ -96,7 +96,7 @@ def on_join(data):
     client_room_id = data["room"]
     if client_room_id == room_id:
         join_room(room_id)
-        connected_clients.add(sid)  # Add the client to the connected clients set
+        connected_clients.add(sid)  
         print(f"✅ {sid} successfully joined room {room_id}")
         emit("join_status", {"status": "success", "message": f"Successfully joined room {room_id}."})
     else:

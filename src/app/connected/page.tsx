@@ -11,6 +11,11 @@ export default function Connected() {
   const [gyroEnabled, setGyroEnabled] = useState(false);
   const lastTouch = useRef<{ x: number; y: number } | null>(null);
   const lastSentTime = useRef(Date.now());
+  const initialGyro = useRef<{
+    alpha: number;
+    beta: number;
+    gamma: number;
+  } | null>(null);
 
   const THROTTLE_DELAY = 0;
 
@@ -44,13 +49,17 @@ export default function Connected() {
 
       if (gyroEnabled && currentTime - lastSentTime.current >= THROTTLE_DELAY) {
         const { alpha, beta, gamma } = event;
-        const gyro: GyroData = {
-          alpha: alpha ?? 0,
-          beta: beta ?? 0,
-          gamma: gamma ?? 0,
-        };
 
-        socket?.emit("gyro_data", gyro);
+        if (initialGyro.current) {
+          const relativeGyro: GyroData = {
+            alpha: (alpha ?? 0) - initialGyro.current.alpha,
+            beta: (beta ?? 0) - initialGyro.current.beta,
+            gamma: (gamma ?? 0) - initialGyro.current.gamma,
+          };
+
+          socket?.emit("gyro_data", relativeGyro);
+        }
+
         lastSentTime.current = currentTime;
       }
     },
@@ -89,11 +98,43 @@ export default function Connected() {
   };
 
   const sendMouseLeft = useCallback(() => socket?.emit("mouse_left"), [socket]);
-  const sendMouseRight = useCallback(() => socket?.emit("mouse_right"), [socket]);
-  const sendKeyboardLeft = useCallback(() => socket?.emit("keyboard_left"), [socket]);
-  const sendKeyboardRight = useCallback(() => socket?.emit("keyboard_right"), [socket]);
+  const sendMouseRight = useCallback(
+    () => socket?.emit("mouse_right"),
+    [socket]
+  );
+  const sendKeyboardLeft = useCallback(
+    () => socket?.emit("keyboard_left"),
+    [socket]
+  );
+  const sendKeyboardRight = useCallback(
+    () => socket?.emit("keyboard_right"),
+    [socket]
+  );
 
-  const toggleGyroControl = useCallback(() => setGyroEnabled((prev) => !prev), []);
+  const toggleGyroControl = useCallback(() => {
+    setGyroEnabled((prev) => {
+      if (!prev) {
+        const handleInitialOrientation = (event: DeviceOrientationEvent) => {
+          const { alpha, beta, gamma } = event;
+          initialGyro.current = {
+            alpha: alpha ?? 0,
+            beta: beta ?? 0,
+            gamma: gamma ?? 0,
+          };
+
+          window.removeEventListener(
+            "deviceorientation",
+            handleInitialOrientation
+          );
+        };
+
+        window.addEventListener("deviceorientation", handleInitialOrientation);
+      } else {
+        initialGyro.current = null;
+      }
+      return !prev;
+    });
+  }, []);
 
   return (
     <div className="h-full px-4 pt-10 pb-4 grid grid-cols-4 grid-rows-4 gap-x-2 gap-y-4">
