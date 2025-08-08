@@ -6,7 +6,6 @@ import keyboard
 import win32con
 import win32gui
 import ctypes
-import time
 import atexit
 
 app = Flask(__name__)
@@ -187,6 +186,11 @@ def on_broadcast(data):
 def on_gyro_data(data):
     sid = request.sid
     handle_client_action(sid, "gyro_data", data)
+
+@socketio.on("ping")
+def on_ping():
+    sid = request.sid
+    emit("pong", room=sid)
 
 
 @socketio.on("mouse_left")

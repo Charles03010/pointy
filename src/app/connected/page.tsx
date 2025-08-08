@@ -119,10 +119,7 @@ export default function Connected() {
     () => socket?.emit("keyboard_right"),
     [socket]
   );
-  const sendScrollUp = useCallback(
-    () => socket?.emit("scroll_up"),
-    [socket]
-  );
+  const sendScrollUp = useCallback(() => socket?.emit("scroll_up"), [socket]);
   const sendScrollDown = useCallback(
     () => socket?.emit("scroll_down"),
     [socket]
@@ -157,66 +154,94 @@ export default function Connected() {
     });
   }, []);
 
+  const [latency, setLatency] = useState<number | null>(null);
+
+  useEffect(() => {
+    let pingInterval: NodeJS.Timeout;
+
+    if (socket) {
+      pingInterval = setInterval(() => {
+        const start = Date.now();
+        socket.emit("ping", () => {
+          const end = Date.now();
+          setLatency(end - start);
+        });
+      }, 1000); // Ping every 1 second
+    }
+
+    return () => {
+      clearInterval(pingInterval);
+    };
+  }, [socket]);
+
   return (
-    <div className="h-full px-4 pt-10 pb-4 grid grid-cols-4 grid-rows-6 gap-x-2 gap-y-4">
-      <div
-        className="w-full min-h-5/7 bg-(--btn-blue-mouse) rounded-xl col-span-2"
-        onClick={sendMouseLeft}
-      />
-      <div
-        className="w-full min-h-5/7 bg-(--btn-blue-mouse) rounded-xl col-span-2"
-        onClick={sendMouseRight}
-      />
-      <div
-        className="w-full min-h-5/7 bg-(--btn-blue-keyboard) rounded-xl col-span-1 row-span-2 flex items-center justify-center"
-        onClick={sendKeyboardLeft}
-      >
-        <ChevronLeft className="text-slate-400" size={50} />
-      </div>
-      <div
-        className="w-full min-h-5/7 bg-(--btn-blue-gyro) rounded-xl col-span-1 flex items-center justify-center"
-        onClick={toggleGyroControl}
-      >
-        <Orbit
-          className={gyroEnabled ? "text-green-400" : "text-slate-400"}
-          size={50}
+    <>
+      <div className="h-full px-4 pt-10 pb-4 grid grid-cols-4 grid-rows-6 gap-x-2 gap-y-4">
+        <div
+          className="w-full min-h-5/7 bg-(--btn-blue-mouse) rounded-xl col-span-2"
+          onClick={sendMouseLeft}
         />
-      </div>
-      <div
-        className="w-full min-h-5/7 bg-(--btn-blue-gyro) rounded-xl col-span-1 flex items-center justify-center"
-        onClick={sendScrollUp}
-      >
-        <ChevronUp className={"text-slate-400"} size={50} />
-      </div>
-      <div
-        className="w-full min-h-5/7 bg-(--btn-blue-keyboard) rounded-xl col-span-1 row-span-2 flex items-center justify-center"
-        onClick={sendKeyboardRight}
-      >
-        <ChevronRight className="text-slate-400" size={50} />
-      </div>
-      <div
-        className="w-full min-h-5/7 bg-(--btn-blue-gyro) rounded-xl col-span-1 flex items-center justify-center"
-        onClick={togglePointer}
-      >
-        <CircleDot
-          className={pointerEnabled ? "text-red-400" : "text-slate-400"}
-          size={50}
+        <div
+          className="w-full min-h-5/7 bg-(--btn-blue-mouse) rounded-xl col-span-2"
+          onClick={sendMouseRight}
         />
+        <div
+          className="w-full min-h-5/7 bg-(--btn-blue-keyboard) rounded-xl col-span-1 row-span-2 flex items-center justify-center"
+          onClick={sendKeyboardLeft}
+        >
+          <ChevronLeft className="text-slate-400" size={50} />
+        </div>
+        <div
+          className="w-full min-h-5/7 bg-(--btn-blue-gyro) rounded-xl col-span-1 flex items-center justify-center"
+          onClick={toggleGyroControl}
+        >
+          <Orbit
+            className={gyroEnabled ? "text-green-400" : "text-slate-400"}
+            size={50}
+          />
+        </div>
+        <div
+          className="w-full min-h-5/7 bg-(--btn-blue-gyro) rounded-xl col-span-1 flex items-center justify-center"
+          onClick={sendScrollUp}
+        >
+          <ChevronUp className={"text-slate-400"} size={50} />
+        </div>
+        <div
+          className="w-full min-h-5/7 bg-(--btn-blue-keyboard) rounded-xl col-span-1 row-span-2 flex items-center justify-center"
+          onClick={sendKeyboardRight}
+        >
+          <ChevronRight className="text-slate-400" size={50} />
+        </div>
+        <div
+          className="w-full min-h-5/7 bg-(--btn-blue-gyro) rounded-xl col-span-1 flex items-center justify-center"
+          onClick={togglePointer}
+        >
+          <CircleDot
+            className={pointerEnabled ? "text-red-400" : "text-slate-400"}
+            size={50}
+          />
+        </div>
+        <div
+          className="w-full min-h-5/7 bg-(--btn-blue-gyro) rounded-xl col-span-1 flex items-center justify-center"
+          onClick={sendScrollDown}
+        >
+          <ChevronDown className={"text-slate-400"} size={50} />
+        </div>
+        <div
+          className="w-full relative min-h-6/7 bg-(--btn-blue-track) rounded-xl col-span-4 row-span-3 flex items-end justify-end touch-none"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          <span className={`m-5 absolute top-0 left-0 text-xs ${
+              latency !== null && latency > 100 ? "text-yellow-500" : "text-green-400"
+            }`}
+          >
+            {latency !== null ? `${latency} ms` : "Menghitung..."}
+          </span>
+          <Mouse className="text-slate-400 m-5" size={50} />
+        </div>
       </div>
-      <div
-        className="w-full min-h-5/7 bg-(--btn-blue-gyro) rounded-xl col-span-1 flex items-center justify-center"
-        onClick={sendScrollDown}
-      >
-        <ChevronDown className={"text-slate-400"} size={50} />
-      </div>
-      <div
-        className="w-full min-h-6/7 bg-(--btn-blue-track) rounded-xl col-span-4 row-span-3 flex items-end justify-end touch-none"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
-        <Mouse className="text-slate-400 m-5" size={50} />
-      </div>
-    </div>
+    </>
   );
 }
