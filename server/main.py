@@ -61,5 +61,20 @@ async def broadcast(sid, data):
     else:
         print(f"⚠️ {sid} tried to broadcast without being in the room.")
 
+@sio.event
+async def gyro_data(sid, data):
+    """
+    Handles gyroscope data sent from clients. This data is expected to contain
+    'alpha', 'beta', and 'gamma' values.
+    """
+    if room_id in sio.rooms(sid):
+        print(f"🌀 Received gyroscope data from {sid}: {data}")
+
+        # Broadcast the received gyroscope data to all clients in the room
+        await sio.emit("gyro_data", data, room=room_id, skip_sid=sid)
+        print(f"📢 Broadcasting gyroscope data to room {room_id}: {data}")
+    else:
+        print(f"⚠️ {sid} tried to send gyroscope data without being in the room.")
+
 if __name__ == "__main__":
     aiohttp.web.run_app(app, host="localhost", port=8765)

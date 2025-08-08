@@ -28,7 +28,7 @@ export default function Pairing() {
             className="mx-auto mb-4"
             alt=""
             width={50}
-            height={50}
+            height={0}
           />
           <h1 className="font-normal text-2xl">Verification Required</h1>
           <p className="font-light">

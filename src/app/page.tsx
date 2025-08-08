@@ -13,7 +13,7 @@ export default function Home() {
             </p>
         </div>
         <div className="">
-          <Image src="/assets/home-ilust.png" className="mx-auto" alt="" width={500} height={500} />
+          <Image src="/assets/home-ilust.png" className="mx-auto" alt="" width={500} height={0} />
         </div>
         <div className="flex flex-col mb-8 space-y-2 justify-center items-center">
           <Link

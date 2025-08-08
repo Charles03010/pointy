@@ -1,6 +1,67 @@
+"use client";
 import { ChevronLeft, ChevronRight, Mouse, Orbit } from "lucide-react";
+import { useEffect, useState } from 'react';
+import { useSocket } from "../socket";
+import { useRouter } from "next/navigation";
 
 export default function Connected() {
+  const socket = useSocket();
+  const router = useRouter();
+  const [gyroData, setGyroData] = useState<{ alpha: number; beta: number; gamma: number } | null>(null);
+  interface GyroData {
+    alpha: number;
+    beta: number;
+    gamma: number;
+  }
+
+  interface DeviceOrientationEventWithAngles extends Event {
+    alpha: number | null;
+    beta: number | null;
+    gamma: number | null;
+  }
+  useEffect(() => {
+    if (sessionStorage.getItem("room") && socket) {
+      socket.emit("join", { room: sessionStorage.getItem("room") });
+
+      socket.on("join_status", (response) => {
+        if (response.status === "success") {
+          return;
+        } else {
+          router.push("/pairing");
+        }
+      });
+      return () => {
+        socket.off("join_status");
+      };
+    }
+    else{
+      router.push("/pairing");
+    }
+  }, [socket, router]);
+  
+  useEffect(() => {
+
+    const handleDeviceOrientation = (event: DeviceOrientationEventWithAngles) => {
+      const { alpha, beta, gamma } = event;
+      const gyro: GyroData = {
+      alpha: alpha ?? 0,
+      beta: beta ?? 0,
+      gamma: gamma ?? 0,
+      };
+      setGyroData(gyro);
+      if (socket) {
+        socket.emit('gyro_data', gyro);
+      }
+    };
+    if (window.DeviceOrientationEvent) {
+      window.addEventListener('deviceorientation', handleDeviceOrientation);
+    }
+    return () => {
+      if (window.DeviceOrientationEvent) {
+        window.removeEventListener('deviceorientation', handleDeviceOrientation);
+      }
+    };
+  }, []);
   return (
     <>
       <div className="h-full px-4 pt-10 pb-4 grid grid-cols-4 grid-rows-4 gap-x-2 gap-y-4">
