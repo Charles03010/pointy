@@ -2,7 +2,7 @@ import socketio
 import random
 import aiohttp.web
 import pyautogui
-import keyboard 
+import keyboard
 
 sio = socketio.AsyncServer(async_mode="aiohttp", cors_allowed_origins="*")
 app = aiohttp.web.Application()
@@ -125,6 +125,34 @@ async def trackpad_action(sid):
         print(f"🖱️ {sid} simulated a trackpad click.")
     else:
         print(f"⚠️ {sid} tried to send a trackpad action without being in the room.")
+
+@sio.event
+async def trackpad_touch(sid, data):
+    """Handle trackpad touch events sent from clients."""
+    if room_id in sio.rooms(sid):
+        touch_x = data.get('x', 0)
+        touch_y = data.get('y', 0)
+
+        # Map the touch data to screen coordinates (if needed)
+        screen_width, screen_height = pyautogui.size()
+
+        # Simulate mouse movement based on touch coordinates
+        pyautogui.moveTo(touch_x, touch_y, duration=0)
+
+        # Log the touch coordinates
+        print(f"Trackpad touch detected: X: {touch_x}, Y: {touch_y}")
+    else:
+        print(f"⚠️ {sid} tried to send trackpad touch data without being in the room.")
+
+@sio.event
+async def trackpad_touch_end(sid):
+    """Handle trackpad touch end event."""
+    if room_id in sio.rooms(sid):
+        # Simulate a mouse click or another action when touch ends
+        # pyautogui.click()
+        print(f"🖱️ {sid} simulated a trackpad click at the end of touch.")
+    else:
+        print(f"⚠️ {sid} tried to send a trackpad touch end without being in the room.")
 
 if __name__ == "__main__":
     aiohttp.web.run_app(app, host="localhost", port=8765)
