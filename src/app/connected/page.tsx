@@ -12,7 +12,7 @@ export default function Connected() {
   const lastTouch = useRef<{ x: number; y: number } | null>(null);
   const lastSentTime = useRef(Date.now());
 
-  const THROTTLE_DELAY = 1000 / 8;
+  const THROTTLE_DELAY = 0;
 
   interface GyroData {
     alpha: number;
@@ -71,40 +71,21 @@ export default function Connected() {
 
   const handleTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
     const touch = event.touches[0];
-    console.log("Touch started:", touch.clientX, touch.clientY);
     lastTouch.current = { x: touch.clientX, y: touch.clientY };
   };
 
-  const handleTouchMove = useCallback(
-    (event: React.TouchEvent<HTMLDivElement>) => {
-      if (!lastTouch.current) return;
-
-      const touch = event.touches[0];
-      const trackpad = event.currentTarget;
-      const trackpadRect = trackpad.getBoundingClientRect();
-
-      const centerX = trackpadRect.left + trackpadRect.width / 2;
-      const centerY = trackpadRect.top + trackpadRect.height / 2;
-
-      const deltaX = touch.clientX - centerX;
-      const deltaY = touch.clientY - centerY;
-
-      const currentTime = Date.now();
-      if (currentTime - lastSentTime.current >= THROTTLE_DELAY) {
-        socket?.emit("trackpad_touch", { x: deltaX, y: deltaY });
-        lastSentTime.current = currentTime;
-      }
-
-      lastTouch.current = { x: touch.clientX, y: touch.clientY };
-      console.log("Touch moved:", touch.clientX, touch.clientY);
-    },
-    []
-  );
+  const handleTouchMove = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (!lastTouch.current || !socket) return;
+    const touch = event.touches[0];
+    const deltaX = touch.clientX - lastTouch.current.x;
+    const deltaY = touch.clientY - lastTouch.current.y;
+    socket.emit("trackpad_touch", { x: deltaX, y: deltaY });
+    lastTouch.current = { x: touch.clientX, y: touch.clientY };
+  };
 
   const handleTouchEnd = () => {
     lastTouch.current = null;
     socket?.emit("trackpad_touch_end");
-    console.log("Touch ended");
   };
 
   const sendMouseLeft = useCallback(() => socket?.emit("mouse_left"), [socket]);

@@ -1,25 +1,27 @@
-import socketio
+from flask import Flask, request
+from flask_socketio import SocketIO, join_room, leave_room, emit
 import random
-import aiohttp.web
 import pyautogui
 import keyboard
 
-sio = socketio.AsyncServer(async_mode="aiohttp", cors_allowed_origins="*")
-app = aiohttp.web.Application()
-sio.attach(app)
+# Flask setup
+app = Flask(__name__)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
+# Room and clients setup
 room_id = str(random.randint(1000, 9999))
+connected_clients = set()  # Track connected clients in the room
 print(f"✅ Server is ready. The secret room ID is: {room_id}")
 
 def is_member_of_room(sid):
     """Check if a client is in the room."""
-    return room_id in sio.rooms(sid)
+    return sid in connected_clients
 
-async def handle_client_action(sid, action, data=None):
+def handle_client_action(sid, action, data=None):
     """Helper function to handle client actions."""
     if is_member_of_room(sid):
         if action == "gyro_data":
-            await handle_gyro_data(sid, data)  
+            handle_gyro_data(sid, data)
         elif action == "mouse_left":
             pyautogui.click(button="left")
             print(f"🔲 {sid} simulated a left mouse click.")
@@ -36,13 +38,13 @@ async def handle_client_action(sid, action, data=None):
             pyautogui.click()
             print(f"🖱️ {sid} simulated a trackpad click.")
         elif action == "trackpad_touch":
-            await handle_trackpad_touch(sid, data)  
+            handle_trackpad_touch(sid, data)
         elif action == "trackpad_touch_end":
             print(f"🖱️ {sid} simulated a trackpad click at the end of touch.")
     else:
         print(f"⚠️ {sid} tried to perform '{action}' without being in the room.")
 
-async def handle_gyro_data(sid, data):
+def handle_gyro_data(sid, data):
     """Handles gyroscope data sent from clients."""
     if is_member_of_room(sid):
         alpha, beta, gamma = data.get("alpha", 0), data.get("beta", 0), data.get("gamma", 0)
@@ -54,84 +56,101 @@ async def handle_gyro_data(sid, data):
         print(f"Moving mouse to: {move_x}, {move_y}")
         pyautogui.moveRel(move_x, move_y, duration=0, tween=pyautogui.linear)
 
-        await sio.emit("gyro_data", data, room=room_id, skip_sid=sid)
+        socketio.emit("gyro_data", data, room=room_id, skip_sid=sid)
     else:
         print(f"⚠️ {sid} tried to send gyroscope data without being in the room.")
 
-async def handle_trackpad_touch(sid, data):
+def handle_trackpad_touch(sid, data):
     """Handle trackpad touch events."""
     if is_member_of_room(sid):
-        touch_x = data.get("x", 0)
-        touch_y = data.get("y", 0)
+        touch_x = data.get("x", 0) * 5
+        touch_y = data.get("y", 0) * 5
 
-        pyautogui.moveRel(touch_x, touch_y, duration=0, tween=pyautogui.linear)
-        print(f"Trackpad touch detected: X: {touch_x}, Y: {touch_y}")
+        pyautogui.moveRel(touch_x, touch_y)
     else:
         print(f"⚠️ {sid} tried to send trackpad touch data without being in the room.")
 
-@sio.event
-async def connect(sid, environ):
+@app.route('/')
+def index():
+    return "Socket.IO Server is Running!"
+
+@socketio.on('connect')
+def on_connect():
+    sid = request.sid
     print(f"🔌 Client connected: {sid}")
 
-@sio.event
-async def disconnect(sid):
+@socketio.on('disconnect')
+def on_disconnect():
+    sid = request.sid
+    connected_clients.discard(sid)  # Remove the client from the connected clients set
     print(f"🔌 Client disconnected: {sid}")
 
-@sio.event
-async def join(sid, data):
+@socketio.on('join')
+def on_join(data):
+    sid = request.sid
     if not isinstance(data, dict) or "room" not in data:
         print(f"❌ {sid} sent an invalid join request.")
-        await sio.emit("join_status", {"status": "error", "message": "Invalid request format."}, to=sid)
+        emit("join_status", {"status": "error", "message": "Invalid request format."})
         return
     
     client_room_id = data["room"]
     if client_room_id == room_id:
-        await sio.enter_room(sid, room_id)
+        join_room(room_id)
+        connected_clients.add(sid)  # Add the client to the connected clients set
         print(f"✅ {sid} successfully joined room {room_id}")
-        await sio.emit("join_status", {"status": "success", "message": f"Successfully joined room {room_id}."}, to=sid)
+        emit("join_status", {"status": "success", "message": f"Successfully joined room {room_id}."})
     else:
         print(f"❌ {sid} failed to join room. Provided: '{client_room_id}', Required: '{room_id}'")
-        await sio.emit("join_status", {"status": "error", "message": "Incorrect room ID."}, to=sid)
+        emit("join_status", {"status": "error", "message": "Incorrect room ID."})
 
-@sio.event
-async def broadcast(sid, data):
+@socketio.on('broadcast')
+def on_broadcast(data):
+    sid = request.sid
     if is_member_of_room(sid):
-        await sio.emit("broadcast", data, room=room_id, skip_sid=sid)
+        emit("broadcast", data, room=room_id, skip_sid=sid)
         print(f"📢 Broadcast from {sid} to room {room_id}: {data}")
     else:
         print(f"⚠️ {sid} tried to broadcast without being in the room.")
 
-@sio.event
-async def gyro_data(sid, data):
-    await handle_client_action(sid, "gyro_data", data)
+@socketio.on('gyro_data')
+def on_gyro_data(data):
+    sid = request.sid
+    handle_client_action(sid, "gyro_data", data)
 
-@sio.event
-async def mouse_left(sid):
-    await handle_client_action(sid, "mouse_left")
+@socketio.on('mouse_left')
+def on_mouse_left():
+    sid = request.sid
+    handle_client_action(sid, "mouse_left")
 
-@sio.event
-async def mouse_right(sid):
-    await handle_client_action(sid, "mouse_right")
+@socketio.on('mouse_right')
+def on_mouse_right():
+    sid = request.sid
+    handle_client_action(sid, "mouse_right")
 
-@sio.event
-async def keyboard_left(sid):
-    await handle_client_action(sid, "keyboard_left")
+@socketio.on('keyboard_left')
+def on_keyboard_left():
+    sid = request.sid
+    handle_client_action(sid, "keyboard_left")
 
-@sio.event
-async def keyboard_right(sid):
-    await handle_client_action(sid, "keyboard_right")
+@socketio.on('keyboard_right')
+def on_keyboard_right():
+    sid = request.sid
+    handle_client_action(sid, "keyboard_right")
 
-@sio.event
-async def trackpad_action(sid):
-    await handle_client_action(sid, "trackpad_action")
+@socketio.on('trackpad_action')
+def on_trackpad_action():
+    sid = request.sid
+    handle_client_action(sid, "trackpad_action")
 
-@sio.event
-async def trackpad_touch(sid, data):
-    await handle_client_action(sid, "trackpad_touch", data)
+@socketio.on('trackpad_touch')
+def on_trackpad_touch(data):
+    sid = request.sid
+    handle_client_action(sid, "trackpad_touch", data)
 
-@sio.event
-async def trackpad_touch_end(sid):
-    await handle_client_action(sid, "trackpad_touch_end")
+@socketio.on('trackpad_touch_end')
+def on_trackpad_touch_end():
+    sid = request.sid
+    handle_client_action(sid, "trackpad_touch_end")
 
-if __name__ == "__main__":
-    aiohttp.web.run_app(app, host="localhost", port=8765)
+if __name__ == '__main__':
+    socketio.run(app, host="localhost", port=8765, debug=True)

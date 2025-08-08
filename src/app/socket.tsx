@@ -11,6 +11,7 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const newSocket = io(process.env.WEB_SOCKET_URL || "https://ws.surly.my.id/", {
+    // const newSocket = io(process.env.WEB_SOCKET_URL || "https://192.168.2.2:8765/", {
       transports: ["websocket"]
     });
     setSocket(newSocket);
