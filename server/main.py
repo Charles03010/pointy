@@ -3,19 +3,26 @@ from flask_socketio import SocketIO, join_room, leave_room, emit
 import random
 import pyautogui
 import keyboard
-
+import win32con
+import win32gui
+import ctypes
+import time
+import atexit
 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 
 room_id = str(random.randint(1000, 9999))
-connected_clients = set()  
+connected_clients = set()
+pointer = 0
 print(f"✅ Server is ready. The secret room ID is: {room_id}")
+
 
 def is_member_of_room(sid):
     """Check if a client is in the room."""
     return sid in connected_clients
+
 
 def handle_client_action(sid, action, data=None):
     """Helper function to handle client actions."""
@@ -40,6 +47,47 @@ def handle_client_action(sid, action, data=None):
         elif action == "scroll_down":
             pyautogui.scroll(-50)
             print(f"⏬ {sid} simulated a mouse scroll down.")
+        elif action == "toggle_pointer":
+            cursor_def = win32gui.LoadImage(
+                0, 32512, win32con.IMAGE_CURSOR, 0, 0, win32con.LR_SHARED
+            )
+            save_system_cursor = ctypes.windll.user32.CopyImage(
+                cursor_def, win32con.IMAGE_CURSOR, 0, 0, win32con.LR_COPYFROMRESOURCE
+            )
+
+            def restore_cursor():
+                print("Restoring original cursor.")
+                ctypes.windll.user32.SetSystemCursor(save_system_cursor, 32512)
+                ctypes.windll.user32.DestroyCursor(save_system_cursor)
+
+            atexit.register(restore_cursor)
+
+            global pointer
+            pointer += 1
+
+            if pointer % 2 != 0:
+                cursor = win32gui.LoadImage(
+                    0,
+                    "./red_pointer.cur",
+                    win32con.IMAGE_CURSOR,
+                    0,
+                    0,
+                    win32con.LR_LOADFROMFILE,
+                )
+                ctypes.windll.user32.SetSystemCursor(cursor, 32512)
+                ctypes.windll.user32.DestroyCursor(cursor)
+            else:
+                cursor = win32gui.LoadImage(
+                    0,
+                    "./arrow_l.cur",
+                    win32con.IMAGE_CURSOR,
+                    0,
+                    0,
+                    win32con.LR_LOADFROMFILE,
+                )
+                ctypes.windll.user32.SetSystemCursor(cursor, 32512)
+                ctypes.windll.user32.DestroyCursor(cursor)
+
         elif action == "trackpad_action":
             pyautogui.click()
             print(f"🖱️ {sid} simulated a trackpad click.")
@@ -50,10 +98,15 @@ def handle_client_action(sid, action, data=None):
     else:
         print(f"⚠️ {sid} tried to perform '{action}' without being in the room.")
 
+
 def handle_gyro_data(sid, data):
     """Handles gyroscope data sent from clients."""
     if is_member_of_room(sid):
-        alpha, beta, gamma = data.get("alpha", 0), data.get("beta", 0), data.get("gamma", 0)
+        alpha, beta, gamma = (
+            data.get("alpha", 0),
+            data.get("beta", 0),
+            data.get("gamma", 0),
+        )
         screen_width, screen_height = pyautogui.size()
 
         move_x = gamma
@@ -66,6 +119,7 @@ def handle_gyro_data(sid, data):
     else:
         print(f"⚠️ {sid} tried to send gyroscope data without being in the room.")
 
+
 def handle_trackpad_touch(sid, data):
     """Handle trackpad touch events."""
     if is_member_of_room(sid):
@@ -76,40 +130,50 @@ def handle_trackpad_touch(sid, data):
     else:
         print(f"⚠️ {sid} tried to send trackpad touch data without being in the room.")
 
-@app.route('/')
+
+@app.route("/")
 def index():
     return "Socket.IO Server is Running!"
 
-@socketio.on('connect')
+
+@socketio.on("connect")
 def on_connect():
     sid = request.sid
     print(f"🔌 Client connected: {sid}")
 
-@socketio.on('disconnect')
+
+@socketio.on("disconnect")
 def on_disconnect():
     sid = request.sid
-    connected_clients.discard(sid)  
+    connected_clients.discard(sid)
     print(f"🔌 Client disconnected: {sid}")
 
-@socketio.on('join')
+
+@socketio.on("join")
 def on_join(data):
     sid = request.sid
     if not isinstance(data, dict) or "room" not in data:
         print(f"❌ {sid} sent an invalid join request.")
         emit("join_status", {"status": "error", "message": "Invalid request format."})
         return
-    
+
     client_room_id = data["room"]
     if client_room_id == room_id:
         join_room(room_id)
-        connected_clients.add(sid)  
+        connected_clients.add(sid)
         print(f"✅ {sid} successfully joined room {room_id}")
-        emit("join_status", {"status": "success", "message": f"Successfully joined room {room_id}."})
+        emit(
+            "join_status",
+            {"status": "success", "message": f"Successfully joined room {room_id}."},
+        )
     else:
-        print(f"❌ {sid} failed to join room. Provided: '{client_room_id}', Required: '{room_id}'")
+        print(
+            f"❌ {sid} failed to join room. Provided: '{client_room_id}', Required: '{room_id}'"
+        )
         emit("join_status", {"status": "error", "message": "Incorrect room ID."})
 
-@socketio.on('broadcast')
+
+@socketio.on("broadcast")
 def on_broadcast(data):
     sid = request.sid
     if is_member_of_room(sid):
@@ -118,55 +182,72 @@ def on_broadcast(data):
     else:
         print(f"⚠️ {sid} tried to broadcast without being in the room.")
 
-@socketio.on('gyro_data')
+
+@socketio.on("gyro_data")
 def on_gyro_data(data):
     sid = request.sid
     handle_client_action(sid, "gyro_data", data)
 
-@socketio.on('mouse_left')
+
+@socketio.on("mouse_left")
 def on_mouse_left():
     sid = request.sid
     handle_client_action(sid, "mouse_left")
 
-@socketio.on('mouse_right')
+
+@socketio.on("mouse_right")
 def on_mouse_right():
     sid = request.sid
     handle_client_action(sid, "mouse_right")
 
-@socketio.on('keyboard_left')
+
+@socketio.on("keyboard_left")
 def on_keyboard_left():
     sid = request.sid
     handle_client_action(sid, "keyboard_left")
 
-@socketio.on('keyboard_right')
+
+@socketio.on("keyboard_right")
 def on_keyboard_right():
     sid = request.sid
     handle_client_action(sid, "keyboard_right")
 
-@socketio.on('scroll_up')
+
+@socketio.on("scroll_up")
 def on_scroll_up():
     sid = request.sid
     handle_client_action(sid, "scroll_up")
 
-@socketio.on('scroll_down')
+
+@socketio.on("scroll_down")
 def on_scroll_down():
     sid = request.sid
     handle_client_action(sid, "scroll_down")
 
-@socketio.on('trackpad_action')
+
+@socketio.on("toggle_pointer")
+def on_toggle_pointer():
+    sid = request.sid
+    handle_client_action(sid, "toggle_pointer")
+
+
+@socketio.on("trackpad_action")
 def on_trackpad_action():
     sid = request.sid
     handle_client_action(sid, "trackpad_action")
 
-@socketio.on('trackpad_touch')
+
+@socketio.on("trackpad_touch")
 def on_trackpad_touch(data):
     sid = request.sid
     handle_client_action(sid, "trackpad_touch", data)
 
-@socketio.on('trackpad_touch_end')
+
+@socketio.on("trackpad_touch_end")
 def on_trackpad_touch_end():
     sid = request.sid
     handle_client_action(sid, "trackpad_touch_end")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     socketio.run(app, host="localhost", port=8765, debug=True)

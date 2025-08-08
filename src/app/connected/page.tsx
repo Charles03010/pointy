@@ -17,6 +17,7 @@ export default function Connected() {
   const router = useRouter();
 
   const [gyroEnabled, setGyroEnabled] = useState(false);
+  const [pointerEnabled, setPointerEnabled] = useState(false);
   const lastTouch = useRef<{ x: number; y: number } | null>(null);
   const lastSentTime = useRef(Date.now());
   const initialGyro = useRef<{
@@ -126,6 +127,10 @@ export default function Connected() {
     () => socket?.emit("scroll_down"),
     [socket]
   );
+  const togglePointer = useCallback(() => {
+    socket?.emit("toggle_pointer");
+    setPointerEnabled((prev) => !prev);
+  }, [socket]);
 
   const toggleGyroControl = useCallback(() => {
     setGyroEnabled((prev) => {
@@ -153,7 +158,7 @@ export default function Connected() {
   }, []);
 
   return (
-    <div className="h-full px-4 pt-10 pb-4 grid grid-cols-4 grid-rows-5 gap-x-2 gap-y-4">
+    <div className="h-full px-4 pt-10 pb-4 grid grid-cols-4 grid-rows-6 gap-x-2 gap-y-4">
       <div
         className="w-full min-h-5/7 bg-(--btn-blue-mouse) rounded-xl col-span-2"
         onClick={sendMouseLeft}
@@ -191,10 +196,10 @@ export default function Connected() {
       </div>
       <div
         className="w-full min-h-5/7 bg-(--btn-blue-gyro) rounded-xl col-span-1 flex items-center justify-center"
-        onClick={toggleGyroControl}
+        onClick={togglePointer}
       >
         <CircleDot
-          className={gyroEnabled ? "text-green-400" : "text-slate-400"}
+          className={pointerEnabled ? "text-red-400" : "text-slate-400"}
           size={50}
         />
       </div>
@@ -205,7 +210,7 @@ export default function Connected() {
         <ChevronDown className={"text-slate-400"} size={50} />
       </div>
       <div
-        className="w-full min-h-6/7 bg-(--btn-blue-track) rounded-xl col-span-4 row-span-2 flex items-end justify-end touch-none"
+        className="w-full min-h-6/7 bg-(--btn-blue-track) rounded-xl col-span-4 row-span-3 flex items-end justify-end touch-none"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
