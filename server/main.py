@@ -34,6 +34,12 @@ def handle_client_action(sid, action, data=None):
         elif action == "keyboard_right":
             keyboard.press_and_release("right")
             print(f"⏩ {sid} simulated a right arrow key press.")
+        elif action == "scroll_up":
+            pyautogui.scroll(50)
+            print(f"⏫ {sid} simulated a mouse scroll up.")
+        elif action == "scroll_down":
+            pyautogui.scroll(-50)
+            print(f"⏬ {sid} simulated a mouse scroll down.")
         elif action == "trackpad_action":
             pyautogui.click()
             print(f"🖱️ {sid} simulated a trackpad click.")
@@ -51,7 +57,7 @@ def handle_gyro_data(sid, data):
         screen_width, screen_height = pyautogui.size()
 
         move_x = gamma
-        move_y = -beta
+        move_y = beta
 
         print(f"Moving mouse to: {move_x}, {move_y}")
         pyautogui.moveRel(move_x, move_y, duration=0, tween=pyautogui.linear)
@@ -136,6 +142,16 @@ def on_keyboard_left():
 def on_keyboard_right():
     sid = request.sid
     handle_client_action(sid, "keyboard_right")
+
+@socketio.on('scroll_up')
+def on_scroll_up():
+    sid = request.sid
+    handle_client_action(sid, "scroll_up")
+
+@socketio.on('scroll_down')
+def on_scroll_down():
+    sid = request.sid
+    handle_client_action(sid, "scroll_down")
 
 @socketio.on('trackpad_action')
 def on_trackpad_action():

@@ -1,5 +1,13 @@
 "use client";
-import { ChevronLeft, ChevronRight, Mouse, Orbit } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  CircleDot,
+  Mouse,
+  Orbit,
+} from "lucide-react";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useSocket } from "../socket";
 import { useRouter } from "next/navigation";
@@ -110,6 +118,14 @@ export default function Connected() {
     () => socket?.emit("keyboard_right"),
     [socket]
   );
+  const sendScrollUp = useCallback(
+    () => socket?.emit("scroll_up"),
+    [socket]
+  );
+  const sendScrollDown = useCallback(
+    () => socket?.emit("scroll_down"),
+    [socket]
+  );
 
   const toggleGyroControl = useCallback(() => {
     setGyroEnabled((prev) => {
@@ -137,7 +153,7 @@ export default function Connected() {
   }, []);
 
   return (
-    <div className="h-full px-4 pt-10 pb-4 grid grid-cols-4 grid-rows-4 gap-x-2 gap-y-4">
+    <div className="h-full px-4 pt-10 pb-4 grid grid-cols-4 grid-rows-5 gap-x-2 gap-y-4">
       <div
         className="w-full min-h-5/7 bg-(--btn-blue-mouse) rounded-xl col-span-2"
         onClick={sendMouseLeft}
@@ -147,22 +163,46 @@ export default function Connected() {
         onClick={sendMouseRight}
       />
       <div
-        className="w-full min-h-5/7 bg-(--btn-blue-keyboard) rounded-xl col-span-1 flex items-center justify-center"
+        className="w-full min-h-5/7 bg-(--btn-blue-keyboard) rounded-xl col-span-1 row-span-2 flex items-center justify-center"
         onClick={sendKeyboardLeft}
       >
         <ChevronLeft className="text-slate-400" size={50} />
       </div>
       <div
-        className="w-full min-h-5/7 bg-(--btn-blue-gyro) rounded-xl col-span-2 flex items-center justify-center"
+        className="w-full min-h-5/7 bg-(--btn-blue-gyro) rounded-xl col-span-1 flex items-center justify-center"
         onClick={toggleGyroControl}
       >
-        <Orbit className="text-slate-400" size={50} />
+        <Orbit
+          className={gyroEnabled ? "text-green-400" : "text-slate-400"}
+          size={50}
+        />
       </div>
       <div
-        className="w-full min-h-5/7 bg-(--btn-blue-keyboard) rounded-xl col-span-1 flex items-center justify-center"
+        className="w-full min-h-5/7 bg-(--btn-blue-gyro) rounded-xl col-span-1 flex items-center justify-center"
+        onClick={sendScrollUp}
+      >
+        <ChevronUp className={"text-slate-400"} size={50} />
+      </div>
+      <div
+        className="w-full min-h-5/7 bg-(--btn-blue-keyboard) rounded-xl col-span-1 row-span-2 flex items-center justify-center"
         onClick={sendKeyboardRight}
       >
         <ChevronRight className="text-slate-400" size={50} />
+      </div>
+      <div
+        className="w-full min-h-5/7 bg-(--btn-blue-gyro) rounded-xl col-span-1 flex items-center justify-center"
+        onClick={toggleGyroControl}
+      >
+        <CircleDot
+          className={gyroEnabled ? "text-green-400" : "text-slate-400"}
+          size={50}
+        />
+      </div>
+      <div
+        className="w-full min-h-5/7 bg-(--btn-blue-gyro) rounded-xl col-span-1 flex items-center justify-center"
+        onClick={sendScrollDown}
+      >
+        <ChevronDown className={"text-slate-400"} size={50} />
       </div>
       <div
         className="w-full min-h-6/7 bg-(--btn-blue-track) rounded-xl col-span-4 row-span-2 flex items-end justify-end touch-none"
